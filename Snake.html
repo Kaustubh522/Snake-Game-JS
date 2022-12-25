@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+    
+    <head>
+
+        <title>Snake</title>
+
+        <link rel = "icon" href = "snake.png">
+
+        <meta charset = "UTF-8">
+        <meta name = "description" content="Snake Game in JS using HTML canvas">
+        <meta name = "author" content = "Kaustubh Kulkarni">
+        
+    </head>
+
+    <body>
+
+        <div style="text-align: center">
+            <canvas id="gameCanvas" width="600" height="600"></canvas></div>
+
+        <div style = "display: none">
+            <img src = "watermelon32.png" id = "watermelon"></div>
+
+        <script>
+            const FPS = 10; // frames per second
+            const imgFood = true;
+            var play = true;
+            var score = 0;
+            var eat = new Audio("eat.mp3");  // Source: https://pixabay.com/sound-effects/munchin-95618/ edited using https://mp3cut.net/ 
+            var hit = new Audio("hit.mp3");  // Source: https://pixabay.com/sound-effects/punch-a-wall-82402/ edited using https://mp3cut.net/  
+            let hitSoundPlayed = false;
+            var eatDist;
+            if (imgFood) {
+                eatDist = 26;
+            } else {
+                eatDist = 15;
+            }
+
+            /** @type {HTMLCanvasElement} */
+            const canv = document.getElementById("gameCanvas");
+            const ctx = canv.getContext("2d");
+
+            //set up the game loop
+            setInterval(update, 1000 / FPS);
+
+            // set up the snake head
+            var snake = {
+                x: canv.width/2,
+                y: canv.height/2 - 100,
+                direction: "stop",
+            }
+
+            // set up tail
+            var tail = [];
+
+            // set up food
+            var food = {
+                x: canv.width/2,
+                y: canv.width/2,
+                r: 5,
+            }
+
+            // set up event handlers
+            document.addEventListener("keydown",keyDown);
+
+            // set up game over function
+            function gameOver(){
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = "black";
+                ctx.font = "30px arial black";
+                ctx.fillText("Game Over!", canv.width/2, canv.height *0.4);
+                play = false;
+                // play hit sound
+                if(!hitSoundPlayed){
+                    hit.play();
+                    hitSoundPlayed = true;
+                }
+            }
+
+            // distance function
+            function distance(x1, y1, x2, y2){
+                return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2-y1, 2));
+            }
+
+            // new tail piece function
+            function newTailPiece(){
+                var piece = {
+                    x: 10000,
+                    y: 10000,
+                }
+
+                return piece;
+            }
+
+            // move food function
+            function moveFood(){
+                food.x = Math.floor(20 + Math.random()*560);
+                food.y = Math.floor(20 + Math.random()*560);
+
+                // check that food does not go to  some part of tail
+                for (var i = tail.length - 1; i > 0; i--){
+                    if (distance(tail[i].x, tail[i].y, food.x, food.y) < eatDist){
+                        moveFood();
+                    }
+                }
+            }
+
+            // key down function
+            function keyDown(/** @type {Keyboard}*/ ev){
+                
+                switch(ev.keyCode){
+
+                    case 37://left arrow
+                        if (snake.direction != "right"){
+                            snake.direction = "left";
+                        }
+                         break;
+                    case 38://up arrow
+                        if (snake.direction != "down"){
+                            snake.direction = "up";
+                        }
+                        break;
+                    case 39://right arrow
+                        if (snake.direction != "left"){
+                            snake.direction = "right";
+                        }
+                        break;
+                    case 40://down arrow
+                        if (snake.direction != "up"){
+                                snake.direction = "down";
+                            }
+                        break;
+                }
+            }
+     
+            // update function
+            function update(){
+
+                //draw background
+                ctx.fillStyle = "#FFD47F";
+                ctx.strokeStyle = "#000000";
+                ctx.lineWidth = 3;
+                ctx.fillRect(0, 0, canv.width, canv.height);
+                ctx.strokeRect(0, 0, canv.width, canv.height);
+
+                //draw snake head
+                ctx.fillStyle = "#00FF00";
+                ctx.fillRect(snake.x-10, snake.y-10, 20, 20);
+
+                //draw tail
+                for (var i = 0; i < tail.length; i++){
+                    ctx.fillStyle = "#808000";
+                    ctx.fillRect(tail[i].x-10, tail[i].y-10, 20, 20);
+                }
+
+                //draw food
+                if (play){
+
+                    // blit an image on the screen
+                    var watermelon = document.getElementById("watermelon");
+                    ctx.drawImage(watermelon, food.x - 16, food.y - 16)
+
+                    /*Or draw a red cirle representing food 
+                    ctx.fillStyle = "#FF0000";
+                    ctx.strokeStyle = "#FF0000";
+                    ctx.beginPath();
+                    ctx.arc(food.x, food.y, food.r, 0, 2*Math.PI);
+                    ctx.stroke();
+                    ctx.fill();*/
+                }
+
+                // wall collisions
+                if (snake.x >= canv.width || snake.x <= 0 || snake.y >= canv.height || snake.y <= 0){
+                    gameOver();
+                }
+
+                // body collisions
+                for (var i = 0; i < tail.length; i++){
+                    if (distance(snake.x, snake.y, tail[i].x, tail[i].y) < 15){
+                        gameOver();
+                    }
+                }
+
+                //move the food and increase tail
+                if (distance(snake.x, snake.y, food.x, food.y) < 15) {
+                    moveFood();
+
+                    //play sound
+                    eat.play();
+
+                    //increase tail
+                    tail.push(newTailPiece());
+
+                    //increase score
+                    score += 10;
+                }
+
+                // move the tail
+                if (play){
+                    for (var i = tail.length - 1; i > 0; i--){
+                        tail[i].x = tail[i-1].x;
+                        tail[i].y = tail[i-1].y;
+                    }
+                
+
+                    try {
+                    tail[0].x = snake.x;
+                    tail[0].y = snake.y;
+                    } catch(err) {}
+
+                    // move the snake head
+                    if (snake.direction == "up") {
+                        snake.y -= 20;
+                    } else if (snake.direction == "down") {
+                        snake.y += 20;
+                    } else if (snake.direction == "left") {
+                        snake.x -= 20;
+                    } else if (snake.direction == "right") {
+                        snake.x += 20;
+                    }
+                }
+
+                // write the score
+                ctx.textAlign = "left";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = "black";
+                ctx.font = " 25px courier";
+                ctx.fillText("Score:" + score, 5, 15);
+
+            }
+
+        </script>
+
+    </body>
+
+</html>
